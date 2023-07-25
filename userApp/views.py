@@ -7,6 +7,9 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 
 from rest_framework.generics import ListCreateAPIView
 
+from django.core.exceptions import ObjectDoesNotExist
+from rest_framework import status
+
 
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -14,6 +17,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializer import UserSerializer, NoteSerializer
 
 
+# to get the totken
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -69,14 +73,23 @@ def userDetails(request, pk):
 
 @api_view(["POST"])
 def userUpdate(request, pk):
-    user = User.objects.get(id=pk)
-    serializer = UserSerializer(instance=user, data=request.data)
-    print(request.data)
-    # print(serializer)
+    try:
+        user = User.objects.get(id=pk)
+    except ObjectDoesNotExist:
+        return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    serializer = UserSerializer(instance=user, data=request.data, partial=True)
+
     if serializer.is_valid():
         serializer.save()
-        print("updated", serializer.data)
-    return Response(serializer.data)
+
+        if "profile_img" in request.FILES:
+            user.profile_img = request.FILES["profile_img"]
+            user.save()
+
+        return Response(serializer.data)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(["DELETE"])
@@ -97,19 +110,3 @@ class classUserList(ListCreateAPIView):
 class Notes(ListCreateAPIView):
     queryset = Notes.objects.all()
     serializer_class = NoteSerializer
-
-
-@api_view(["POST"])
-def userUpdate(request, pk):
-    user = User.objects.get(id=pk)
-    serializer = UserSerializer(instance=user, data=request.data)
-    print(request.data)
-    # print(serializer)
-    if serializer.is_valid():
-        serializer.save()
-        print("updated", serializer.data)
-        if "profile_img" in request.data:
-            user.profile_img = request.data.get("profile_img")
-            user.save()
-
-    return Response(serializer.data)

@@ -3,6 +3,7 @@ from userApp.models import User, Notes
 
 
 class UserSerializer(serializers.ModelSerializer):
+    # Model is passed to serializer
     class Meta:
         model = User
         fields = ["id", "username", "email", "password", "profile_img"]
